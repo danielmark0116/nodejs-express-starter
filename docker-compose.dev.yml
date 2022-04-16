@@ -1,0 +1,43 @@
+version: "3"
+
+services:
+  live_now_redis:
+    image: "redis:6.2.6-alpine"
+    container_name: live_now_redis
+    hostname: live_now_redis
+    env_file:
+      - .env.development
+    command: >
+      --requirepass ${REDIS_PASSWORD}
+    restart: "always"
+
+  live_now_db:
+    image: postgis/postgis:12-3.2
+    container_name: live_now_db
+    restart: always
+    hostname: "live_now_db"
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+    env_file:
+      - .env.development
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    command: -p $POSTGRES_PORT
+
+  live_now_server:
+    container_name: live_now_server
+    env_file:
+      - .env.development
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: "always"
+    volumes:
+      - ./server:/app
+      - /app/node_modules/
+    depends_on:
+      - "live_now_db"
+      - "live_now_redis"
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    command: ["yarn", "dev"]
